@@ -111,14 +111,19 @@ public extension MultipartFormDataBodyParameters {
                 throw Error.cannotGetFileSize(fileURL)
             }
 
-            let detectedMimeType = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, fileURL.pathExtension as CFString, nil)
-                .map { $0.takeRetainedValue() }
-                .flatMap { UTTypeCopyPreferredTagWithClass($0, kUTTagClassMIMEType)?.takeRetainedValue() }
-                .map { $0 as String }
-
             self.inputStream = inputStream
             self.name = name
-            self.mimeType = mimeType ?? detectedMimeType ?? "application/octet-stream"
+            self.mimeType = {
+                #if os(visionOS)
+                let detectedMimeType: String? = nil
+                #else
+                let detectedMimeType = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, fileURL.pathExtension as CFString, nil)
+                    .map { $0.takeRetainedValue() }
+                    .flatMap { UTTypeCopyPreferredTagWithClass($0, kUTTagClassMIMEType)?.takeRetainedValue() }
+                    .map { $0 as String }
+                #endif
+                return mimeType ?? detectedMimeType ?? "application/octet-stream"
+            }()
             self.fileName = fileName ?? fileURL.lastPathComponent
             self.count = bodyLength
         }
